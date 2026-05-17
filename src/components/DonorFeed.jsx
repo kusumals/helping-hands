@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../services/firebase';
-import { collection, getDocs, addDoc, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, query, where, onSnapshot } from 'firebase/firestore';
 
 const DonorFeed = ({ onLogout, currentUserEmail }) => {
   const [needs, setNeeds] = useState([]);
@@ -31,24 +31,24 @@ const DonorFeed = ({ onLogout, currentUserEmail }) => {
     { value: 'other', label: '📦 Other', icon: '📦' },
   ];
 
-  // Load ALL public thank you messages for EVERY donor to see
+  // Load public thank you messages (NO index required)
   useEffect(() => {
     console.log('Loading public thank you messages...');
     
-    // Simple query - get all completed donations that have a publicThankYou message
+    // Simple query - only filter by publicThankYou existing
     const q = query(
       collection(db, 'donations'), 
-      where('status', '==', 'completed'),
       where('publicThankYou', '!=', null)
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const thankYous = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const allThankYous = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Filter by status manually (avoids needing composite index)
+      const completedThankYous = allThankYous.filter(t => t.status === 'completed');
       // Sort by most recent first
-      thankYous.sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
-      console.log('Public thank you messages loaded:', thankYous.length);
-      console.log('First thank you:', thankYous[0]);
-      setPublicThankYous(thankYous);
+      completedThankYous.sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
+      console.log('Public thank yous loaded:', completedThankYous.length);
+      setPublicThankYous(completedThankYous);
     }, (error) => {
       console.error('Error loading thank yous:', error);
     });
@@ -56,7 +56,7 @@ const DonorFeed = ({ onLogout, currentUserEmail }) => {
     return () => unsubscribe();
   }, []);
 
-  // Load needs
+  // Load needs that are NOT fulfilled
   useEffect(() => {
     loadNeeds();
   }, []);
@@ -266,9 +266,9 @@ const DonorFeed = ({ onLogout, currentUserEmail }) => {
         {publicThankYous.length > 0 ? (
           <div className="mb-8 bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-6 shadow-md">
             <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <span>🎉</span> Recent Donations
+              <span>🎉</span> Recent Donations & Thank Yous
             </h2>
-            <p className="text-sm text-gray-500 mb-4">See who's making a difference! Join them by donating below.</p>
+            <p className="text-sm text-gray-500 mb-4">See how others are making a difference! Join them by donating below.</p>
             <div className="space-y-3">
               {publicThankYous.map((thankYou) => (
                 <div key={thankYou.id} className="bg-white rounded-xl p-4 shadow-sm border-l-4 border-green-400">
