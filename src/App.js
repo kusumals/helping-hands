@@ -1,25 +1,26 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState } from 'react';
+import Login from './components/Login';
+import NGODashboard from './components/NGODashboard';
+import DonorFeed from './components/DonorFeed';
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+  const [userType, setUserType] = useState(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState('');
+
+  if (!userType) {
+    return <Login onLogin={(type, email) => {
+      console.log('Login callback:', type, email);
+      setUserType(type);
+      setCurrentUserEmail(email || '');
+    }} />;
+  }
+
+  if (userType === 'authority') {
+    return <NGODashboard onLogout={() => setUserType(null)} />;
+  }
+
+  console.log('Rendering DonorFeed with email:', currentUserEmail);
+  return <DonorFeed onLogout={() => setUserType(null)} currentUserEmail={currentUserEmail} />;
 }
 
 export default App;
